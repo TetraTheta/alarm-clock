@@ -8,8 +8,8 @@ use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 use windows_sys::Win32::Graphics::Gdi::{
   BI_RGB, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, CreateDIBSection, DIB_RGB_COLORS, DeleteDC, DeleteObject, HGDIOBJ, SelectObject,
 };
-use windows_sys::Win32::UI::Shell::ExtractIconExW;
-use windows_sys::Win32::UI::WindowsAndMessaging::{DI_NORMAL, DestroyIcon, DrawIconEx, GetSystemMetrics, SM_CXICON, SM_CYICON};
+use windows_sys::Win32::UI::Shell::SHDefExtractIconW;
+use windows_sys::Win32::UI::WindowsAndMessaging::{DI_NORMAL, DestroyIcon, DrawIconEx};
 use winrt_toast_reborn::content::audio::{LoopingSound, Sound};
 use winrt_toast_reborn::content::image::ImagePlacement;
 use winrt_toast_reborn::{Audio, Image, Toast, ToastDuration, ToastManager, register};
@@ -17,6 +17,7 @@ use winrt_toast_reborn::{Audio, Image, Toast, ToastDuration, ToastManager, regis
 use crate::configuration::{NotificationConfig, SoundConfig};
 
 const AUM_ID: &str = "AlarmClock.Desktop";
+const NOTIFICATION_ICON_SIZE: u32 = 48;
 
 pub(crate) struct Notifier {
   audio: Option<AudioPlayer>,
@@ -161,12 +162,13 @@ fn parse_icon_spec(value: &str) -> (&str, i32) {
 fn extract_icon(path: &Path, index: i32) -> Result<(Vec<u8>, u32, u32), String> {
   let path = path.as_os_str().to_string_lossy().encode_utf16().chain(Some(0)).collect::<Vec<_>>();
   let mut icon = ptr::null_mut();
-  if unsafe { ExtractIconExW(path.as_ptr(), index, &mut icon, ptr::null_mut(), 1) } == 0 || icon.is_null() {
+  let extracted = unsafe { SHDefExtractIconW(path.as_ptr(), index, 0, &mut icon, ptr::null_mut(), NOTIFICATION_ICON_SIZE) };
+  if extracted != 0 || icon.is_null() {
     return Err("Cannot extract the configured notification icon.".to_owned());
   }
 
-  let width = unsafe { GetSystemMetrics(SM_CXICON) }.max(1) as u32;
-  let height = unsafe { GetSystemMetrics(SM_CYICON) }.max(1) as u32;
+  let width = NOTIFICATION_ICON_SIZE;
+  let height = NOTIFICATION_ICON_SIZE;
   let mut pixels = ptr::null_mut();
   let info = BITMAPINFO {
     bmiHeader: BITMAPINFOHEADER {

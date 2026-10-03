@@ -23,3 +23,11 @@ fn treats_unknown_sound_name_as_a_path() {
     _ => panic!("expected a file sound"),
   }
 }
+
+#[test]
+fn extracts_the_notification_center_icon_size() {
+  let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("resource/main.ico");
+  let (_, width, height) = extract_icon(&path, 0).expect("notification icon should be extracted");
+
+  assert_eq!((width, height), (48, 48));
+}
